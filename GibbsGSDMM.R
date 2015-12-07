@@ -23,6 +23,7 @@ for(d in 1:D){
 
 doc.occurrences <- list()
 occurrences <- list()
+doc.topic <- list()
 
 for(i in 1:iteration){
   #Andranno salvate gli output per ogni generazione
@@ -69,8 +70,11 @@ for(i in 1:iteration){
     n_w_z[, z[d]] <- n_w_z[, z[d]] + N_d_w[d, ]
     occurrences[[i]] <- n_w_z
     doc.occurrences[[i]] <- m_z
+    doc.topic[[i]] <- z
   }
-  #Aggiornare le variabili di output per ogni ciclo
+   if(i%%1000 == 0){
+    cat(i)
+  }
 }
 
 topic.dist.uno <- matrix(NA, nrow = iteration, ncol = V)
