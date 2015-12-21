@@ -80,24 +80,3 @@ Adm.Gibbs <- function(dtm, K, iteration, alpha = NULL, beta = NULL, verbose = TR
 list(occurrences.matrix = occurrences, topic.assignment = doc.topic, posterior.estimates = posterior)
 }
 
-topic.dist.uno <- matrix(NA, nrow = iteration, ncol = V)
-for(i in (iteration/2):iteration){
-  topic.dist.uno[i, ] <- occurrences[[i]][, 1]/sum(occurrences[[i]][, 1])
-}
-
-boxplot(topic.dist.uno, main = "1000 doc e 1000 iterazioni")
-
-
-topic.dist.due <- matrix(NA, nrow = iteration, ncol = V)
-for(i in (iteration/2):iteration){
-  topic.dist.due[i, ] <- occurrences[[i]][, 2]/sum(occurrences[[i]][, 2])
-}
-
-boxplot(topic.dist.due, main = "1000 doc e 1000 iterazioni")
-
-topic.dist.tre <- matrix(NA, nrow = iteration, ncol = V)
-for(i in (iteration/2):iteration){
-  topic.dist.tre[i, ] <- occurrences[[i]][, 3]/sum(occurrences[[i]][, 3])
-}
-
-boxplot(topic.dist.tre, main = "1000 doc e 1000 iterazioni")
