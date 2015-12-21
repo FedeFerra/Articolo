@@ -1,6 +1,6 @@
 Adm.Gibbs <- function(dtm, K, iteration, alpha = NULL, beta = NULL, verbose = TRUE, post = TRUE){
 
-  N_d_w <- as.matrix(matrice.dtm)
+  N_d_w <- as.matrix(dtm)
   V <- ncol(dtm)
   D <- nrow(dtm)
 
@@ -11,29 +11,30 @@ Adm.Gibbs <- function(dtm, K, iteration, alpha = NULL, beta = NULL, verbose = TR
   m_z <- rep(0,K)
   n_z <- rep(0,K)
   n_w_z <- matrix(0,nrow = V,ncol=K)
-  N_d_w <- as.matrix(matrice.dtm)
   N_d <- as.vector(rowSums(N_d_w))
 
   for(d in 1:D){
-    z[d] <- which(rmultinom(1,1,rep(1/K,K))==1)
-    m_z[z[d]] <- m_z[z[d]]+1
-    n_z[z[d]] <- n_z[z[d]]+N_d[d]
+    z[d] <- which(rmultinom(1, 1, rep(1/K, K)) == 1)
+    m_z[z[d]] <- m_z[z[d]] + 1
+    n_z[z[d]] <- n_z[z[d]] + N_d[d]
     n_w_z[, z[d]] <- n_w_z[, z[d]] + N_d_w[d, ]
   }
 
-  doc.occurrences <- list()
+  
   occurrences <- list()
   doc.topic <- list()
+  posterior <- list()
+  kernel.matrix <- matrix(NA, D, K)
 
   for(i in 1:iteration){
     #Andranno salvate gli output per ogni generazione
     for(d in 1:D){
-      m_z[z[d]] <- m_z[z[d]]-1
-      n_z[z[d]] <- n_z[z[d]]-N_d[d]
+      m_z[z[d]] <- m_z[z[d]] - 1
+      n_z[z[d]] <- n_z[z[d]] - N_d[d]
       n_w_z[, z[d]] <- n_w_z[, z[d]] - N_d_w[d, ]
       #Estrarre dalla full conditional
       index <- which(N_d_w[d, ] != 0)
-      vector.constant <- (m_z+rep(alpha,length(m_z)))/rep(D-1+K*alpha,length(m_z))
+      vector.constant <- (m_z + rep(alpha, length(m_z)))/rep(D - 1 + K*alpha, length(m_z))
     
       conteggi <- N_d_w[d, index]
       J <- sequence(conteggi)
@@ -61,7 +62,10 @@ Adm.Gibbs <- function(dtm, K, iteration, alpha = NULL, beta = NULL, verbose = TR
       vector.denominator <- apply(matrix.sum, 2, function(x) prod(x))
     
       kernel <- vector.constant*(vector.numerator/vector.denominator)
-  
+      if(post){
+      kernel.matrix[d, ] <- kernel
+      }
+      
       z[d] <- sample(1:K, 1, prob = kernel)
       #Aumento i conteggi per topic e e parole totali
       m_z[z[d]] <- m_z[z[d]]+1
