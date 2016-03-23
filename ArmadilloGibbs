@@ -1,0 +1,146 @@
+src <- '
+//Inizializzo i vettori
+
+vec z = as<vec>(zin); 
+vec m_z = as<vec>(m_zin);
+vec n_z = as<vec>(n_zin);
+vec N_d = as<vec>(N_din);
+mat n_w_z = as<mat>(n_w_zin);
+mat N_d_w = as<mat>(N_d_win);
+//uword ddd = 0;
+
+for(uword nsim = 0; nsim < 5000; nsim++) {
+for(uword d = 0; d < N_d.n_elem; d++) {
+
+//ddd = ddd + 1;
+//Aggiorno i valori all inizio del ciclo
+//Attenzione agli indici, vanno riguardati
+
+m_z(z(d) - 1) = m_z(z(d) - 1) - 1; 
+n_z(z(d) - 1) = n_z(z(d) - 1) - N_d(d);
+n_w_z.row(z(d) - 1) = n_w_z.row(z(d) - 1) - N_d_w.row(d);
+
+//Creo il vettore di indici dei valori diversi da 0 nella riga corrispondente
+//uvec index = find(N_d_w.row(d));
+
+//Creo un vettore vuoto di lunghezza length(m_z) e lo riempio con i valori corrispondenti con fill
+//Per length(m_z) si usa m_z.n_elem
+
+vec alpha(m_z.n_elem);
+alpha.fill(0.2);
+
+vec KalphaD(m_z.n_elem);
+KalphaD.fill(2723 - 1 + 5*0.2);
+
+vec vectorConstants = (m_z + alpha)/(KalphaD);
+
+//uvec dd(1);
+//dd(0) = 84;
+
+//vec conteggi = aaa(dd, index);
+
+vec conteggi = nonzeros(N_d_w.row(d));
+
+//J <- sequence(conteggi)
+uword i = 0;
+vec J(0u);
+
+for(i = 0; i < conteggi.n_elem; i++) {
+  vec prog(conteggi(i), fill::ones);
+  prog = cumsum(prog);
+  J = join_cols(J, prog);
+}
+
+//matrix.J <- matrix(J, nrow = length(J), ncol = K)
+
+mat Jbeta = repmat(J, 1, 5);
+
+//Jbeta.fill(J + 0.2 - 1);
+mat betaOne(Jbeta.n_rows, Jbeta.n_cols);
+betaOne.fill(0.2 - 1);
+
+//Non gli piace dd come uvec
+uvec index = find(N_d_w.row(d));
+mat a(0u, 0u);
+//uword i = 0;
+
+for(i = 0; i < index.n_elem; i++) {
+  mat b = repmat(n_w_z.col(index(i)), 1, conteggi(i));
+  a = join_rows(a, b);
+}
+
+//matrix.sum <- matrix.J + matrix.Beta + matrix.count - matrix.One
+//Va fatto il trasposto anche se non molto elegante, ricontrollare una volta finito
+mat matrixNum = Jbeta + trans(a) + betaOne;
+rowvec countProd = prod(matrixNum, 0);
+
+//I <- sequence(N_d[d])
+//Attenzione all indice di N_d, uvec non va bene
+vec I(N_d(d), fill::ones);
+I = cumsum(I);
+
+mat Ibeta = repmat(I, 1, 5);
+
+mat VbetaOne(Ibeta.n_rows, Ibeta.n_cols);
+VbetaOne.fill(416*0.002403846 - 1);
+
+mat countDen = repmat(n_z, 1, I.n_elem);
+
+mat matrixDen = Ibeta + trans(countDen) + VbetaOne;
+rowvec countProd1 = prod(matrixDen, 0);
+
+//Ciclo for per creare il vettore di probabilità
+rowvec kernel(5);
+for(i = 0; i < 5; i++) {
+  kernel(i) = vectorConstants(i)*countProd(i)/countProd1(i);
+  if (kernel(i) < 0) {
+    kernel(i) = 0;
+  }
+}
+
+//if (prod(kernel) == NA) {
+//  break;
+//}
+
+double scale = sum(kernel);
+
+for(i = 0; i < 5; i++) {
+  kernel(i) = kernel(i)/scale;
+}
+
+vec x(5, fill::ones);
+x = cumsum(x);
+
+vec random = Rcpp::RcppArmadillo::sample(as<NumericVector>(wrap(x)), 1, false, as<NumericVector>(wrap(kernel)));
+z(d) = as<double>(wrap(random));
+
+m_z(z(d) - 1) = m_z(z(d) - 1) + 1; 
+n_z(z(d) - 1) = n_z(z(d) - 1) + N_d(d);
+n_w_z.row(z(d) - 1) = n_w_z.row(z(d) - 1) + N_d_w.row(d);
+
+}
+}
+
+//Salvare la lista degli oggetti
+return(Rcpp::List::create(
+                    Rcpp::Named("m_z") = m_z,
+                    Rcpp::Named("n_z") = n_z,
+                    Rcpp::Named("n_z_w") = n_w_z
+                    //Rcpp::Named("kernel") = kernel
+                    //Rcpp::Named("random") = random
+                    ));
+'
+plug.ArmaExt <- Rcpp:::Rcpp.plugin.maker(include.before='#include <RcppArmadillo.h>
+                                                     #include <RcppArmadilloExtensions/sample.h>
+                                         ',
+                                         Depends=c("RcppArmadillo","RcppArmadilloExtensions", "Rcpp"),
+                                         LinkingTo=c("RcppArmadillo","RcppArmadilloExtensions", "Rcpp")
+                                         #,libs="-larmadillo"
+)
+
+registerPlugin("RcppArmaExt", plug.ArmaExt)
+
+fn <- cxxfunction(signature(zin = "numeric", m_zin = "numeric", n_zin = "numeric", N_din = "numeric", 
+                            n_w_zin = "numeric", N_d_win = "numeric"), src, plugin = 'RcppArmaExt', rcpp_inc)
+
+res <- fn(z, m_z, n_z, N_d, t(n_w_z), N_d_w)
