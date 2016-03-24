@@ -1,6 +1,11 @@
 src <- '
 //Inizializzo i vettori
 
+uword K = as<uword>(Kin);
+double alphaP = as<double>(alphaPin);
+double betaP = as<double>(betaPin);
+uword Nsim = as<uword>(Nsimin);
+
 vec z = as<vec>(zin); 
 vec m_z = as<vec>(m_zin);
 vec n_z = as<vec>(n_zin);
@@ -9,7 +14,7 @@ mat n_w_z = as<mat>(n_w_zin);
 mat N_d_w = as<mat>(N_d_win);
 //uword ddd = 0;
 
-for(uword nsim = 0; nsim < 5000; nsim++) {
+for(uword nsim = 0; nsim < Nsim; nsim++) {
 for(uword d = 0; d < N_d.n_elem; d++) {
 
 //ddd = ddd + 1;
@@ -27,10 +32,10 @@ n_w_z.row(z(d) - 1) = n_w_z.row(z(d) - 1) - N_d_w.row(d);
 //Per length(m_z) si usa m_z.n_elem
 
 vec alpha(m_z.n_elem);
-alpha.fill(0.2);
+alpha.fill(alphaP);
 
 vec KalphaD(m_z.n_elem);
-KalphaD.fill(2723 - 1 + 5*0.2);
+KalphaD.fill(N_d_w.n_rows - 1 + K*alphaP);
 
 vec vectorConstants = (m_z + alpha)/(KalphaD);
 
@@ -53,11 +58,11 @@ for(i = 0; i < conteggi.n_elem; i++) {
 
 //matrix.J <- matrix(J, nrow = length(J), ncol = K)
 
-mat Jbeta = repmat(J, 1, 5);
+mat Jbeta = repmat(J, 1, K);
 
 //Jbeta.fill(J + 0.2 - 1);
 mat betaOne(Jbeta.n_rows, Jbeta.n_cols);
-betaOne.fill(0.2 - 1);
+betaOne.fill(betaP - 1);
 
 //Non gli piace dd come uvec
 uvec index = find(N_d_w.row(d));
@@ -79,10 +84,10 @@ rowvec countProd = prod(matrixNum, 0);
 vec I(N_d(d), fill::ones);
 I = cumsum(I);
 
-mat Ibeta = repmat(I, 1, 5);
+mat Ibeta = repmat(I, 1, K);
 
 mat VbetaOne(Ibeta.n_rows, Ibeta.n_cols);
-VbetaOne.fill(416*0.002403846 - 1);
+VbetaOne.fill(N_d_w.n_cols*betaP - 1);
 
 mat countDen = repmat(n_z, 1, I.n_elem);
 
@@ -90,8 +95,8 @@ mat matrixDen = Ibeta + trans(countDen) + VbetaOne;
 rowvec countProd1 = prod(matrixDen, 0);
 
 //Ciclo for per creare il vettore di probabilità
-rowvec kernel(5);
-for(i = 0; i < 5; i++) {
+rowvec kernel(K);
+for(i = 0; i < K; i++) {
   kernel(i) = vectorConstants(i)*countProd(i)/countProd1(i);
   if (kernel(i) < 0) {
     kernel(i) = 0;
@@ -104,11 +109,11 @@ for(i = 0; i < 5; i++) {
 
 double scale = sum(kernel);
 
-for(i = 0; i < 5; i++) {
+for(i = 0; i < K; i++) {
   kernel(i) = kernel(i)/scale;
 }
 
-vec x(5, fill::ones);
+vec x(K, fill::ones);
 x = cumsum(x);
 
 vec random = Rcpp::RcppArmadillo::sample(as<NumericVector>(wrap(x)), 1, false, as<NumericVector>(wrap(kernel)));
@@ -141,6 +146,10 @@ plug.ArmaExt <- Rcpp:::Rcpp.plugin.maker(include.before='#include <RcppArmadillo
 registerPlugin("RcppArmaExt", plug.ArmaExt)
 
 fn <- cxxfunction(signature(zin = "numeric", m_zin = "numeric", n_zin = "numeric", N_din = "numeric", 
-                            n_w_zin = "numeric", N_d_win = "numeric"), src, plugin = 'RcppArmaExt', rcpp_inc)
-
+                            n_w_zin = "numeric", N_d_win = "numeric"
+                            , Kin = "numeric"
+                            , alphaPin = "numeric"
+                            , betaPin = "numeric"
+                            , Nsimin = "numeric"
+                            ), src, plugin = 'RcppArmaExt', rcpp_inc)
 res <- fn(z, m_z, n_z, N_d, t(n_w_z), N_d_w)
