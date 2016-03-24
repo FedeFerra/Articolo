@@ -1,0 +1,27 @@
+Adm.Gibbs.Plus <- function(dtm, K, iteration){
+  
+  
+  N_d_w <- as.matrix(dtm)
+  V <- ncol(dtm)
+  D <- nrow(dtm)
+  
+  alpha <- 1/K 
+  beta <- 1/V
+  #La matrice di prova è matrice.dtm
+  z <- rep(0, D)
+  #begin
+  m_z <- rep(0, K)
+  n_z <- rep(0, K)
+  n_w_z <- matrix(0, nrow = V, ncol=K)
+  N_d <- as.vector(rowSums(N_d_w))
+  
+  
+  for(d in 1:D){
+    z[d] <- which(rmultinom(1, 1, rep(1/K, K)) == 1)
+    m_z[z[d]] <- m_z[z[d]] + 1
+    n_z[z[d]] <- n_z[z[d]] + N_d[d]
+    n_w_z[, z[d]] <- n_w_z[, z[d]] + N_d_w[d, ]
+  }
+  
+  fn(z, m_z, n_z, N_d, t(n_w_z), N_d_w, K, alpha, beta, iteration)
+}
