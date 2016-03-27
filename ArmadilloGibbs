@@ -6,6 +6,8 @@ double alphaP = as<double>(alphaPin);
 double betaP = as<double>(betaPin);
 uword Nsim = as<uword>(Nsimin);
 
+Progress p(Nsim, true);
+
 vec z = as<vec>(zin); 
 vec m_z = as<vec>(m_zin);
 vec n_z = as<vec>(n_zin);
@@ -124,6 +126,9 @@ n_z(z(d) - 1) = n_z(z(d) - 1) + N_d(d);
 n_w_z.row(z(d) - 1) = n_w_z.row(z(d) - 1) + N_d_w.row(d);
 
 }
+
+p.increment();
+topicAssignment.col(nsim) = z;
 }
 
 //Salvare la lista degli oggetti
@@ -135,15 +140,16 @@ return(Rcpp::List::create(
                     //Rcpp::Named("random") = random
                     ));
 '
-plug.ArmaExt <- Rcpp:::Rcpp.plugin.maker(include.before='#include <RcppArmadillo.h>
-                                                     #include <RcppArmadilloExtensions/sample.h>
+plug.ArmaExtProg <- Rcpp:::Rcpp.plugin.maker(include.before = '#include <RcppArmadillo.h>
+                                                            #include <RcppArmadilloExtensions/sample.h>
+                                                            #include <progress.hpp>
                                          ',
-                                         Depends=c("RcppArmadillo","RcppArmadilloExtensions", "Rcpp"),
-                                         LinkingTo=c("RcppArmadillo","RcppArmadilloExtensions", "Rcpp")
+                                         Depends=c("RcppArmadillo","RcppArmadilloExtensions","RcppProgress", "Rcpp"),
+                                         LinkingTo=c("RcppArmadillo","RcppArmadilloExtensions", "RcppProgress", "Rcpp")
                                          #,libs="-larmadillo"
 )
 
-registerPlugin("RcppArmaExt", plug.ArmaExt)
+registerPlugin("RcppArmaExtProg", plug.ArmaExtProg)
 
 fn <- cxxfunction(signature(zin = "numeric", m_zin = "numeric", n_zin = "numeric", N_din = "numeric", 
                             n_w_zin = "numeric", N_d_win = "numeric"
@@ -151,5 +157,4 @@ fn <- cxxfunction(signature(zin = "numeric", m_zin = "numeric", n_zin = "numeric
                             , alphaPin = "numeric"
                             , betaPin = "numeric"
                             , Nsimin = "numeric"
-                            ), src, plugin = 'RcppArmaExt', rcpp_inc)
-res <- fn(z, m_z, n_z, N_d, t(n_w_z), N_d_w)
+                            ), src, plugin = 'RcppArmaExtProg', rcpp_inc)
