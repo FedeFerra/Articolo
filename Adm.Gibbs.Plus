@@ -1,5 +1,6 @@
 Adm.Gibbs.Plus <- function(dtm, K, iteration){
   
+  cat("Please wait...", "\n")
   
   N_d_w <- as.matrix(dtm)
   V <- ncol(dtm)
@@ -22,6 +23,8 @@ Adm.Gibbs.Plus <- function(dtm, K, iteration){
     n_z[z[d]] <- n_z[z[d]] + N_d[d]
     n_w_z[, z[d]] <- n_w_z[, z[d]] + N_d_w[d, ]
   }
+  
+  cat("Thank you for your patience!", "\n")
   
   fn(z, m_z, n_z, N_d, t(n_w_z), N_d_w, K, alpha, beta, iteration)
 }
