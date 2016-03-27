@@ -1,5 +1,5 @@
 # Articolo
 
-require(inline) \n
+require(inline) \newline
 require(RcppArmadillo)
 require(RcppProgress)
