@@ -1,5 +1,5 @@
 # Articolo
 
-require(inline) 
-require(RcppArmadillo)
-require(RcppProgress)
+require(inline)  
+require(RcppArmadillo)  
+require(RcppProgress)  
